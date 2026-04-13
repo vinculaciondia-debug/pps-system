@@ -17,7 +17,7 @@
     <table>
         <thead>
         <tr>
-            <th>ID</th><th>Cuenta</th><th>Estado</th><th>Tipo</th><th>Supervisor</th><th>Fecha</th>
+            <th>ID</th><th>Cuenta</th><th>Estado</th><th>Tipo</th><th>Empresa</th><th>Supervisor</th><th>Fecha</th>
         </tr>
         </thead>
         <tbody>
@@ -27,6 +27,7 @@
                 <td>{{ $s->numero_cuenta }}</td>
                 <td>{{ $s->estado_solicitud }}</td>
                 <td>{{ $s->tipo_practica }}</td>
+                <td>{{ $s->nombre_empresa ?? '—' }}</td>
                 <td>{{ $s->supervisor_name ?? 'Sin asignar' }}</td>
                 <td>{{ optional($s->created_at)->format('d/m/Y') }}</td>
             </tr>

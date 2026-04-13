@@ -52,7 +52,7 @@ class CalculadoraFechaFinalizacion
             
             // Verificar si es día laborable y NO es feriado
             if (isset($diasLaborables[$nombreDia]) && 
-                $diasLaborables[$nombreDia]['activo'] === true &&
+                filter_var($diasLaborables[$nombreDia]['activo'] ?? false, FILTER_VALIDATE_BOOLEAN) &&
                 !$this->esFeriado($fechaActual, $diasFeriados)) {
                 
                 // Sumar las horas de este día
@@ -76,7 +76,7 @@ class CalculadoraFechaFinalizacion
             $nombreDia = $this->obtenerNombreDia($fechaActual->dayOfWeek);
             
             if (isset($diasLaborables[$nombreDia]) && 
-                $diasLaborables[$nombreDia]['activo'] === true &&
+                filter_var($diasLaborables[$nombreDia]['activo'] ?? false, FILTER_VALIDATE_BOOLEAN) &&
                 !$this->esFeriado($fechaActual, $diasFeriados)) {
                 $diasAgregados++;
             }
@@ -106,7 +106,7 @@ class CalculadoraFechaFinalizacion
         $total = 0;
         
         foreach ($diasLaborables as $dia => $config) {
-            if (isset($config['activo']) && $config['activo'] === true) {
+            if (isset($config['activo']) && filter_var($config['activo'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
                 $total += $config['horas_laborales'] ?? 0;
             }
         }
@@ -171,7 +171,7 @@ class CalculadoraFechaFinalizacion
         $activos = [];
         
         foreach ($diasLaborables as $dia => $config) {
-            if (isset($config['activo']) && $config['activo'] === true) {
+            if (isset($config['activo']) && filter_var($config['activo'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
                 $activos[] = $dia;
             }
         }
@@ -263,7 +263,7 @@ private function contarFeriadosExcluidos(
                 $nombreDia = $this->obtenerNombreDia($fechaFeriado->dayOfWeek);
                 
                 if (isset($diasLaborables[$nombreDia]) && 
-                    $diasLaborables[$nombreDia]['activo'] === true) {
+                    filter_var($diasLaborables[$nombreDia]['activo'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
                     $count++;
                 }
             }
@@ -285,7 +285,7 @@ private function contarFeriadosExcluidos(
         // Validar que al menos un día esté activo
         $hayDiaActivo = false;
         foreach ($diasLaborables as $dia => $config) {
-            if (isset($config['activo']) && $config['activo'] === true) {
+            if (isset($config['activo']) && filter_var($config['activo'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
                 $hayDiaActivo = true;
                 
                 // Validar que tenga horas válidas

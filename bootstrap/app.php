@@ -14,7 +14,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
             'estudiante.acceso' => \App\Http\Middleware\CheckEstudianteAcceso::class,
-            'supervisor' => \App\Http\Middleware\CheckSupervisorRole::class,  // 👈 AGREGAR ESTA LÍNEA
+            'supervisor'        => \App\Http\Middleware\CheckSupervisorRole::class,
+            'admin.role'        => \App\Http\Middleware\CheckAdminRole::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

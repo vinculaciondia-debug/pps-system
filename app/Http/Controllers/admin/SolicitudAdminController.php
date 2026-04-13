@@ -11,6 +11,7 @@ use App\Models\SolicitudPPS;
 use App\Models\Supervisor;
 use App\Models\User;
 use App\Models\Documento;
+use App\Services\AuditService;
 
 class SolicitudAdminController extends Controller
 {
@@ -144,6 +145,13 @@ class SolicitudAdminController extends Controller
 
                     Log::info('Práctica por trabajo aprobada sin supervisor: Solicitud #' . $id);
 
+                    AuditService::log(
+                        'aprobar_solicitud',
+                        "Aprobó la solicitud #{$id} (práctica por trabajo) del estudiante {$solicitud->user->name}",
+                        'SolicitudPPS', (int)$id,
+                        ['tipo' => 'trabajo', 'estudiante' => $solicitud->user->name]
+                    );
+
                     return response()->json([
                         'success' => true,
                         'message' => 'Práctica por trabajo aprobada exitosamente (sin asignación de supervisor)'
@@ -214,9 +222,16 @@ class SolicitudAdminController extends Controller
                     'supervisor_id' => $supervisorId,
                 ]);
 
-                $mensaje = $modoAsignacion === 'automatico' 
+                $mensaje = $modoAsignacion === 'automatico'
                     ? "Solicitud aprobada y asignada automáticamente al supervisor: {$nombreSupervisor}"
                     : "Solicitud aprobada y asignada manualmente al supervisor: {$nombreSupervisor}";
+
+                AuditService::log(
+                    'aprobar_solicitud',
+                    "Aprobó la solicitud #{$id} del estudiante {$solicitud->user->name} — Supervisor asignado: {$nombreSupervisor}",
+                    'SolicitudPPS', (int)$id,
+                    ['tipo' => 'normal', 'modo_asignacion' => $modoAsignacion, 'supervisor' => $nombreSupervisor, 'estudiante' => $solicitud->user->name]
+                );
 
                 return response()->json([
                     'success' => true,
@@ -254,10 +269,17 @@ class SolicitudAdminController extends Controller
 
                 $solicitud->estado_solicitud = 'RECHAZADA';
                 $solicitud->observaciones = $request->observaciones;
-                $solicitud->supervisor_id = null; // Quitar supervisor si tenía
+                $solicitud->supervisor_id = null;
                 $solicitud->save();
 
                 Log::info('Solicitud #' . $id . ' rechazada. Motivo: ' . $request->observaciones);
+
+                AuditService::log(
+                    'rechazar_solicitud',
+                    "Rechazó la solicitud #{$id} del estudiante {$solicitud->user->name}",
+                    'SolicitudPPS', (int)$id,
+                    ['estudiante' => $solicitud->user->name, 'motivo' => $request->observaciones]
+                );
 
                 return redirect()
                     ->route('admin.solicitudes.pendientes')
@@ -364,12 +386,19 @@ class SolicitudAdminController extends Controller
             }
 
             $supervisorAnterior = $solicitud->supervisor ? $solicitud->supervisor->user->name : 'Ninguno';
-            
+
             // Cambiar supervisor
             $solicitud->supervisor_id = $request->supervisor_id;
             $solicitud->save();
 
             Log::info('Supervisor cambiado en solicitud #' . $id . ' | Anterior: ' . $supervisorAnterior . ' | Nuevo: ' . $nuevoSupervisor->user->name);
+
+            AuditService::log(
+                'cambiar_supervisor',
+                "Cambió el supervisor de la solicitud #{$id} ({$solicitud->user->name}): {$supervisorAnterior} → {$nuevoSupervisor->user->name}",
+                'SolicitudPPS', (int)$id,
+                ['estudiante' => $solicitud->user->name, 'supervisor_anterior' => $supervisorAnterior, 'supervisor_nuevo' => $nuevoSupervisor->user->name]
+            );
 
             // Retornar JSON en lugar de redirect
             return response()->json([
@@ -649,6 +678,13 @@ public function finalizar(Request $request, $id)
             'estudiante' => $solicitud->user->name,
             'finalizada_en' => $solicitud->updated_at
         ]);
+
+        AuditService::log(
+            'finalizar_solicitud',
+            "Finalizó la práctica #{$id} del estudiante {$solicitud->user->name}",
+            'SolicitudPPS', (int)$id,
+            ['estudiante' => $solicitud->user->name, 'tipo' => $solicitud->tipo_practica]
+        );
 
         return response()->json([
             'success' => true,

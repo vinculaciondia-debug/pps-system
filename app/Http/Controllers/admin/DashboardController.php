@@ -71,28 +71,33 @@ class DashboardController extends Controller
         // ==========================================
         // TENDENCIA DE SOLICITUDES (ÚLTIMOS 6 MESES)
         // ==========================================
-        // Solo activas
-        $solicitudesPorMes = SolicitudPPS::select(
+        // Obtener datos de BD agrupados por mes/año
+        $datosPorMes = SolicitudPPS::select(
                 DB::raw('MONTH(created_at) as mes'),
                 DB::raw('YEAR(created_at) as anio'),
                 DB::raw('COUNT(*) as total'),
                 DB::raw('SUM(CASE WHEN estado_solicitud = "APROBADA" THEN 1 ELSE 0 END) as aprobadas'),
                 DB::raw('SUM(CASE WHEN estado_solicitud = "RECHAZADA" THEN 1 ELSE 0 END) as rechazadas')
             )
-            ->where('created_at', '>=', Carbon::now()->subMonths(6))
+            ->where('created_at', '>=', Carbon::now()->subMonths(5)->startOfMonth())
             ->groupBy('anio', 'mes')
-            ->orderBy('anio', 'asc')
-            ->orderBy('mes', 'asc')
             ->get()
-            ->map(function($item) {
-                $meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-                return [
-                    'mes' => $meses[$item->mes - 1],
-                    'solicitudes' => $item->total,
-                    'aprobadas' => $item->aprobadas,
-                    'rechazadas' => $item->rechazadas
-                ];
-            });
+            ->keyBy(fn($item) => $item->anio . '-' . $item->mes);
+
+        // Construir serie completa de 6 meses (siempre muestra todos los meses)
+        $nombresMeses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        $solicitudesPorMes = collect();
+        for ($i = 5; $i >= 0; $i--) {
+            $fecha = Carbon::now()->subMonths($i);
+            $clave = $fecha->year . '-' . $fecha->month;
+            $dato  = $datosPorMes->get($clave);
+            $solicitudesPorMes->push([
+                'mes'        => $nombresMeses[$fecha->month - 1],
+                'solicitudes' => $dato ? (int)$dato->total     : 0,
+                'aprobadas'   => $dato ? (int)$dato->aprobadas : 0,
+                'rechazadas'  => $dato ? (int)$dato->rechazadas : 0,
+            ]);
+        }
 
         // ==========================================
         // DISTRIBUCIÓN POR ESTADO (PARA GRÁFICA PIE)
@@ -203,6 +208,21 @@ class DashboardController extends Controller
             });
 
         // ==========================================
+        // EMPRESAS CON MÁS ESTUDIANTES
+        // ==========================================
+        $empresasConEstudiantes = SolicitudPPS::select(
+                'nombre_empresa',
+                DB::raw('COUNT(*) as total_aceptados')
+            )
+            ->whereIn('estado_solicitud', ['APROBADA', 'FINALIZADA'])
+            ->whereNotNull('nombre_empresa')
+            ->where('nombre_empresa', '!=', '')
+            ->groupBy('nombre_empresa')
+            ->orderByDesc('total_aceptados')
+            ->limit(10)
+            ->get();
+
+        // ==========================================
         // TENDENCIAS (COMPARACIÓN MES ANTERIOR)
         // ==========================================
         $solicitudesMesActual = SolicitudPPS::whereMonth('created_at', Carbon::now()->month)
@@ -260,7 +280,10 @@ class DashboardController extends Controller
             
             // Tendencias
             'tendenciaSolicitudes',
-            'tendenciaEstudiantes'
+            'tendenciaEstudiantes',
+
+            // Empresas
+            'empresasConEstudiantes'
         ));
     }
 

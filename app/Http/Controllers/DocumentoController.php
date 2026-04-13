@@ -128,8 +128,8 @@ class DocumentoController extends Controller
                 
                 if ($cartaAnterior) {
                     // Eliminar el archivo anterior del storage
-                    if (Storage::disk('public')->exists($cartaAnterior->ruta)) {
-                        Storage::disk('public')->delete($cartaAnterior->ruta);
+                    if (Storage::disk('private')->exists($cartaAnterior->ruta)) {
+                        Storage::disk('private')->delete($cartaAnterior->ruta);
                     }
                     
                     // Eliminar el registro anterior
@@ -156,7 +156,7 @@ class DocumentoController extends Controller
             $archivo = $request->file('archivo');
             $extension = $archivo->getClientOriginalExtension();
             $nombreArchivo = $tipo . '_' . time() . '_' . uniqid() . '.' . $extension;
-            $ruta = $archivo->storeAs('documentos', $nombreArchivo, 'public');
+            $ruta = $archivo->storeAs('documentos', $nombreArchivo, 'private');
 
             // Crear documento
             $documento = Documento::create([

@@ -56,7 +56,7 @@ Route::get('/dashboard', function () {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 // ======================= ADMIN =======================
-Route::middleware(['auth', 'verified'])
+Route::middleware(['auth', 'verified', 'admin.role'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
@@ -171,6 +171,19 @@ Route::put('/usuarios/{user}/rol', [\App\Http\Controllers\Admin\UsuarioAdminCont
         // ========================================
         // OTRAS VISTAS
         // ========================================
+        Route::get('/audit-log', [\App\Http\Controllers\Admin\AuditLogController::class, 'index'])->name('audit.index');
+
+        // ========================================
+        // GESTIÓN DE EMPRESAS
+        // ========================================
+        Route::prefix('empresas')->name('empresas.')->group(function () {
+            Route::get('/',                    [\App\Http\Controllers\Admin\EmpresaController::class, 'index'])->name('index');
+            Route::post('/',                   [\App\Http\Controllers\Admin\EmpresaController::class, 'store'])->name('store');
+            Route::put('/{empresa}',           [\App\Http\Controllers\Admin\EmpresaController::class, 'update'])->name('update');
+            Route::patch('/{empresa}/toggle',  [\App\Http\Controllers\Admin\EmpresaController::class, 'toggleActiva'])->name('toggle');
+            Route::delete('/{empresa}',        [\App\Http\Controllers\Admin\EmpresaController::class, 'destroy'])->name('destroy');
+        });
+
         Route::view('/reportes', 'admin.reportes')->name('reportes');
         Route::get('reportes', [ReporteController::class,'index'])->name('reportes');
         Route::post('reportes/preview', [ReporteController::class,'preview'])->name('reportes.preview');

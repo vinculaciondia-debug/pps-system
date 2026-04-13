@@ -326,6 +326,57 @@
         </div>
     </div>
 
+    {{-- ===================== EMPRESAS ===================== --}}
+    <div class="bg-white border border-slate-200 rounded-xl shadow-sm mb-6">
+        <div class="px-6 py-4 border-b border-slate-200 flex items-center gap-2">
+            <i class="fas fa-building text-unahblue"></i>
+            <h2 class="font-semibold text-slate-700">Estudiantes aceptados por empresa</h2>
+            <span class="ml-auto text-xs text-slate-400">Prácticas aprobadas y finalizadas</span>
+        </div>
+        @if($empresasConEstudiantes->isEmpty())
+            <div class="px-6 py-8 text-center text-slate-400 text-sm">
+                <i class="fas fa-building text-3xl mb-2 block"></i>
+                No hay datos de empresas aún.
+            </div>
+        @else
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead class="bg-slate-50 text-slate-600 text-xs uppercase">
+                        <tr>
+                            <th class="px-6 py-3 text-left font-semibold">#</th>
+                            <th class="px-6 py-3 text-left font-semibold">Empresa</th>
+                            <th class="px-6 py-3 text-center font-semibold">Estudiantes aceptados</th>
+                            <th class="px-6 py-3 text-left font-semibold">Participación</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        @php $totalEmpresas = $empresasConEstudiantes->sum('total_aceptados'); @endphp
+                        @foreach($empresasConEstudiantes as $i => $empresa)
+                            @php $porcentaje = $totalEmpresas > 0 ? round(($empresa->total_aceptados / $totalEmpresas) * 100) : 0; @endphp
+                            <tr class="hover:bg-slate-50">
+                                <td class="px-6 py-3 text-slate-400 font-medium">{{ $i + 1 }}</td>
+                                <td class="px-6 py-3 font-medium text-slate-800">{{ $empresa->nombre_empresa }}</td>
+                                <td class="px-6 py-3 text-center">
+                                    <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-unahblue text-white font-bold text-sm">
+                                        {{ $empresa->total_aceptados }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-3 w-48">
+                                    <div class="flex items-center gap-2">
+                                        <div class="flex-1 bg-slate-200 rounded-full h-2">
+                                            <div class="bg-unahblue h-2 rounded-full" style="width: {{ $porcentaje }}%"></div>
+                                        </div>
+                                        <span class="text-xs text-slate-500 w-8 text-right">{{ $porcentaje }}%</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+    </div>
+
     {{-- Atajos Rápidos --}}
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <a href="{{ route('admin.solicitudes.pendientes') }}" class="group">
@@ -356,6 +407,8 @@
             </div>
         </a>
     </div>
+
+
 </div>
 @endsection
 

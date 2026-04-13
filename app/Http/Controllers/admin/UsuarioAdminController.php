@@ -9,15 +9,30 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Auth\Events\Registered;
 use Spatie\Permission\Models\Role;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use App\Services\AuditService;
 
 class UsuarioAdminController extends Controller
 {
     // Mostrar listado + formularios
-    public function index()
+    public function index(Request $request)
     {
-        $usuarios = User::with('roles')->latest()->get();
+        $query = User::with('roles')->latest();
+
+        if ($request->filled('busqueda')) {
+            $b = $request->busqueda;
+            $query->where(function($q) use ($b) {
+                $q->where('name', 'like', "%{$b}%")
+                  ->orWhere('email', 'like', "%{$b}%");
+            });
+        }
+
+        if ($request->filled('rol')) {
+            $query->where('rol', $request->rol);
+        }
+
+        $usuarios = $query->paginate(20)->withQueryString();
         $roles = Role::all();
-      return view('admin.usuarios', compact('usuarios', 'roles'));
+        return view('admin.usuarios', compact('usuarios', 'roles'));
     }
 
     // Crear un usuario individual
@@ -103,8 +118,17 @@ class UsuarioAdminController extends Controller
             'rol' => 'required|exists:roles,name',
         ]);
 
-      $user->rol = $request->rol;
-$user->save();
+        $rolAnterior = $user->rol;
+        $user->rol = $request->rol;
+        $user->save();
+
+        AuditService::log(
+            'cambiar_rol_usuario',
+            "Cambió el rol de {$user->name} ({$user->email}): {$rolAnterior} → {$request->rol}",
+            'User', $user->id,
+            ['usuario' => $user->name, 'email' => $user->email, 'rol_anterior' => $rolAnterior, 'rol_nuevo' => $request->rol]
+        );
+
         return back()->with('success', 'Rol actualizado correctamente.');
     }
 }

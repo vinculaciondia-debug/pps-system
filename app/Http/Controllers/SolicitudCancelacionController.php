@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\SolicitudPPS;
 use App\Models\SolicitudCancelacion;
+use App\Services\AuditService;
 
 class SolicitudCancelacionController extends Controller
 {
@@ -102,18 +103,25 @@ class SolicitudCancelacionController extends Controller
         $rutaArchivo = $request->file('archivo')
             ->store("private/cancelaciones/{$solicitud->id}");
 
-        // Registrar solicitud de cancelación (si tu schema tiene más campos, agrégalos)
+        // Registrar solicitud de cancelación
         SolicitudCancelacion::create([
-            'user_id' => $userId,
-            // 'solicitud_id' => $solicitud->id, // descomenta si tu tabla lo tiene
-            'motivo'   => $request->string('motivo'),
-            'archivo'  => $rutaArchivo,
-            'estado'   => 'PENDIENTE',
+            'user_id'      => $userId,
+            'solicitud_id' => $solicitud->id,
+            'motivo'       => $request->string('motivo'),
+            'archivo'      => $rutaArchivo,
+            'estado'       => 'PENDIENTE',
         ]);
 
         // Cambiar estado base (oculta del dashboard)
         $solicitud->estado_solicitud = SolicitudPPS::EST_CANCELADA;
         $solicitud->save();
+
+        AuditService::log(
+            'cancelar_solicitud',
+            "Canceló la solicitud #{$solicitud->id} (empresa: {$solicitud->nombre_empresa})",
+            'SolicitudPPS', $solicitud->id,
+            ['motivo' => $request->string('motivo'), 'estudiante' => auth()->user()->name]
+        );
 
         return redirect()
             ->route('estudiantes.dashboard')

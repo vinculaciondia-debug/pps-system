@@ -28,6 +28,21 @@
                 </div>
             @endif
 
+            <!-- Error de credenciales -->
+            @if ($errors->any())
+                <div class="mb-4 rounded-xl border border-red-300 bg-red-50 px-4 py-4 text-sm text-red-800 shadow-sm">
+                    <div class="flex items-start gap-2">
+                        <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm-.75-11.25a.75.75 0 011.5 0v4.5a.75.75 0 01-1.5 0v-4.5zm.75 7a.75.75 0 100-1.5.75.75 0 000 1.5z" clip-rule="evenodd"/>
+                        </svg>
+                        <div>
+                            <p class="font-semibold">Credenciales incorrectas</p>
+                            <p class="mt-1">El correo o la contraseña son incorrectos. Verifica tus datos e intenta de nuevo.</p>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
             
 
             <form method="POST" action="{{ route('login') }}">
@@ -36,7 +51,7 @@
                 <!-- Email Address -->
                 <div>
                     <x-label for="email" value="Correo institucional" />
-                    <x-input id="email" class="block mt-1 w-full" type="email" name="email" required autofocus />
+                    <x-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required autofocus />
                 </div>
 
                 <!-- Password -->

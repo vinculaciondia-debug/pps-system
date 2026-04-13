@@ -58,7 +58,26 @@
 
     {{-- LISTADO DE USUARIOS --}}
     <div class="bg-white shadow rounded-xl p-6">
-        <h2 class="text-lg font-semibold mb-4">Usuarios registrados</h2>
+        <div class="flex flex-wrap items-end gap-3 mb-4">
+            <h2 class="text-lg font-semibold">Usuarios registrados</h2>
+            <form method="GET" action="{{ route('admin.usuarios.index') }}" class="flex flex-wrap gap-2 ml-auto">
+                <input type="text" name="busqueda" value="{{ request('busqueda') }}"
+                    placeholder="Buscar por nombre o correo..."
+                    class="border rounded px-3 py-1.5 text-sm w-64">
+                <select name="rol" class="border rounded px-3 py-1.5 text-sm">
+                    <option value="">Todos los roles</option>
+                    <option value="estudiante"   {{ request('rol') === 'estudiante'   ? 'selected' : '' }}>Estudiante</option>
+                    <option value="supervisor"   {{ request('rol') === 'supervisor'   ? 'selected' : '' }}>Supervisor</option>
+                    <option value="admin"        {{ request('rol') === 'admin'        ? 'selected' : '' }}>Admin</option>
+                    <option value="vinculacion"  {{ request('rol') === 'vinculacion'  ? 'selected' : '' }}>Vinculación</option>
+                </select>
+                <button type="submit" class="bg-blue-600 text-white px-3 py-1.5 rounded text-sm">Buscar</button>
+                @if(request('busqueda') || request('rol'))
+                    <a href="{{ route('admin.usuarios.index') }}" class="border px-3 py-1.5 rounded text-sm text-slate-600">Limpiar</a>
+                @endif
+            </form>
+        </div>
+        <p class="text-xs text-slate-500 mb-3">Mostrando {{ $usuarios->firstItem() }}–{{ $usuarios->lastItem() }} de {{ $usuarios->total() }} usuarios</p>
         <table class="w-full text-sm">
             <thead>
                 <tr class="bg-gray-100 text-left">
@@ -101,6 +120,9 @@
                 @endforeach
             </tbody>
         </table>
+        <div class="mt-4">
+            {{ $usuarios->links() }}
+        </div>
     </div>
 </div>
 @endsection

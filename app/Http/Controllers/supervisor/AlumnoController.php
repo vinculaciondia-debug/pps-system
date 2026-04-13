@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use App\Services\AuditService;
 
 class AlumnoController extends Controller
 {
@@ -152,6 +153,11 @@ public function subirSupervision(Request $request, $solicitudId)
         ->where('supervisor_id', $supervisor->id)
         ->firstOrFail();
 
+    // Solo se pueden subir supervisiones a prácticas activas (APROBADA)
+    if ($solicitud->estado_solicitud !== 'APROBADA') {
+        return back()->with('error', 'No se puede registrar una supervisión porque la práctica no está activa.');
+    }
+
     try {
         \DB::beginTransaction();
 
@@ -192,6 +198,13 @@ public function subirSupervision(Request $request, $solicitudId)
         \DB::commit();
 
         Log::info('Supervisión creada: Solicitud #' . $solicitudId . ' - Supervisión #' . $request->numero_supervision);
+
+        AuditService::log(
+            'subir_supervision',
+            "Subió la supervisión #{$request->numero_supervision} de la solicitud #{$solicitudId} (estudiante: {$solicitud->user->name})",
+            'SolicitudPPS', (int)$solicitudId,
+            ['numero_supervision' => $request->numero_supervision, 'estudiante' => $solicitud->user->name, 'fecha' => $request->fecha_supervision]
+        );
 
         return back()->with('success', 'Supervisión #' . $request->numero_supervision . ' subida exitosamente');
 

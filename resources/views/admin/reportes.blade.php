@@ -6,7 +6,7 @@
 <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <h1 class="text-3xl sm:text-4xl font-bold text-unahblue pb-4">Reportes y Estadísticas</h1>
 
-    <form id="formFiltros" class="grid gap-4 md:grid-cols-4 bg-white border border-slate-200 rounded-xl p-4 mb-6">
+    <form id="formFiltros" class="grid gap-4 md:grid-cols-5 bg-white border border-slate-200 rounded-xl p-4 mb-6">
         <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">Estado</label>
             <select name="estado" class="w-full rounded-lg border-slate-300">
@@ -28,6 +28,10 @@
             </select>
         </div>
         <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Empresa</label>
+            <input type="text" name="empresa" placeholder="Buscar empresa..." class="w-full rounded-lg border-slate-300 text-sm">
+        </div>
+        <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">Desde</label>
             <input type="date" name="desde" class="w-full rounded-lg border-slate-300">
         </div>
@@ -35,7 +39,7 @@
             <label class="block text-xs font-semibold text-slate-600 mb-1">Hasta</label>
             <input type="date" name="hasta" class="w-full rounded-lg border-slate-300">
         </div>
-        <div class="md:col-span-4 flex gap-2 pt-2">
+        <div class="md:col-span-5 flex gap-2 pt-2">
             <button type="button" id="btnPreview" class="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold">Previsualizar</button>
             <button type="button" id="btnLimpiar" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm font-semibold">Limpiar</button>
         </div>
@@ -70,6 +74,7 @@
                         <th class="px-3 py-2 text-left font-semibold">Cuenta</th>
                         <th class="px-3 py-2 text-left font-semibold">Estado</th>
                         <th class="px-3 py-2 text-left font-semibold">Tipo</th>
+                        <th class="px-3 py-2 text-left font-semibold">Empresa</th>
                         <th class="px-3 py-2 text-left font-semibold">Supervisor</th>
                         <th class="px-3 py-2 text-left font-semibold">Fecha</th>
                     </tr>
@@ -129,6 +134,7 @@ function pintarTabla(rows) {
             <td class="px-3 py-2"><small class="text-slate-500">${s.numero_cuenta ?? ''}</small></td>
             <td class="px-3 py-2"><span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${clsEstado(s.estado_solicitud)}">${s.estado_solicitud}</span></td>
             <td class="px-3 py-2">${s.tipo_practica ?? ''}</td>
+            <td class="px-3 py-2 text-slate-700">${s.nombre_empresa ?? '<span class="text-slate-400">—</span>'}</td>
             <td class="px-3 py-2">${s.supervisor_name ?? 'Sin asignar'}</td>
             <td class="px-3 py-2"><small>${formatFecha(s.created_at)}</small></td>
         </tr>

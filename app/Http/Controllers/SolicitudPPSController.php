@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\SolicitudPPS;
 use App\Models\Documento;
+use App\Models\Empresa;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -104,40 +105,48 @@ class SolicitudPPSController extends Controller
 'empresa_id' => ['nullable','integer','exists:empresas,id'],
                 'numero_jefe'       => 'required|string|max:50',
                 'correo_jefe'       => 'required|email|max:255',
-                'puesto_trabajo'    => 'nullable|string|max:255',
-                'anios_trabajando'  => 'nullable|integer|min:0|max:100',
-                'fecha_inicio'      => 'required|date|after_or_equal:today',
+                'puesto_trabajo'    => [Rule::requiredIf($request->input('tipo_practica') === 'trabajo'), 'nullable', 'string', 'max:255'],
+                'anios_trabajando'  => [Rule::requiredIf($request->input('tipo_practica') === 'trabajo'), 'nullable', 'integer', 'min:0', 'max:100'],
+                'fecha_inicio'      => [Rule::requiredIf($request->input('tipo_practica') === 'normal'), 'nullable', 'date', 'after_or_equal:today'],
                 'observacion'       => 'nullable|string|max:1000',
 
-                // Validación simplificada
-                'dias_laborables' => 'required|array',
+                'dias_laborables' => [Rule::requiredIf($request->input('tipo_practica') === 'normal'), 'nullable', 'array'],
                 'dias_feriados' => 'nullable|string',
 
-                // Documentos
-                'documento_ia01'        => 'nullable|file|mimes:pdf|max:5120',
-                'documento_ia02'        => 'nullable|file|mimes:pdf|max:5120',
-                'colegiacion'           => 'nullable|file|mimes:pdf|max:5120',
-                'carta_aceptacion'      => 'nullable|file|mimes:pdf|max:5120',
-                'carta_presentacion'    => 'nullable|file|mimes:pdf|max:5120',
-                'constancia_aprobacion' => 'nullable|file|mimes:pdf|max:5120',
-                'constancia_trabajo'    => 'nullable|file|mimes:pdf|max:5120',
+                // Documentos — requeridos según tipo de práctica
+                'colegiacion'           => 'required|file|mimes:pdf|max:5120',
+                'documento_ia01'        => [Rule::requiredIf($request->input('tipo_practica') === 'normal'), 'nullable', 'file', 'mimes:pdf', 'max:5120'],
+                'carta_aceptacion'      => [Rule::requiredIf($request->input('tipo_practica') === 'normal'), 'nullable', 'file', 'mimes:pdf', 'max:5120'],
+                'carta_presentacion'    => [Rule::requiredIf($request->input('tipo_practica') === 'normal'), 'nullable', 'file', 'mimes:pdf', 'max:5120'],
+                'documento_ia02'        => [Rule::requiredIf($request->input('tipo_practica') === 'trabajo'), 'nullable', 'file', 'mimes:pdf', 'max:5120'],
+                'constancia_trabajo'    => [Rule::requiredIf($request->input('tipo_practica') === 'trabajo'), 'nullable', 'file', 'mimes:pdf', 'max:5120'],
+                'constancia_aprobacion' => [Rule::requiredIf($request->input('tipo_practica') === 'trabajo'), 'nullable', 'file', 'mimes:pdf', 'max:5120'],
             ], [
-                'telefono_alumno.required' => 'El número de teléfono es obligatorio',
-                'foto_estudiante.required' => 'La foto del estudiante es obligatoria',
-                'foto_estudiante.image' => 'Debe ser una imagen válida (JPG, PNG)',
-                'tipo_empresa.required' => 'Debes indicar si es empresa pública o privada',
-                'fecha_inicio.required' => 'La fecha de inicio es obligatoria',
-                'fecha_inicio.after_or_equal' => 'La fecha de inicio debe ser hoy o posterior',
-                'dias_laborables.required' => 'Debes especificar tus días laborables',
-                'dni_estudiante.required' => 'El DNI del estudiante es obligatorio',
-                'cargo_jefe.required' => 'El cargo del jefe inmediato es obligatorio',
+                'telefono_alumno.required'      => 'El número de teléfono es obligatorio',
+                'foto_estudiante.required'      => 'La foto del estudiante es obligatoria',
+                'foto_estudiante.image'         => 'Debe ser una imagen válida (JPG, PNG)',
+                'tipo_empresa.required'         => 'Debes indicar si es empresa pública o privada',
+                'fecha_inicio.required'         => 'La fecha de inicio es obligatoria',
+                'fecha_inicio.after_or_equal'   => 'La fecha de inicio debe ser hoy o posterior',
+                'dias_laborables.required'      => 'Debes especificar tus días laborables',
+                'dni_estudiante.required'       => 'El DNI del estudiante es obligatorio',
+                'cargo_jefe.required'           => 'El cargo del jefe inmediato es obligatorio',
                 'nivel_academico_jefe.required' => 'El nivel académico del jefe es obligatorio',
+                'puesto_trabajo.required'       => 'El puesto de trabajo es obligatorio',
+                'anios_trabajando.required'     => 'Los años trabajando son obligatorios',
+                'colegiacion.required'          => 'La colegiación profesional es obligatoria',
+                'documento_ia01.required'       => 'El formulario IA-01 es obligatorio',
+                'carta_aceptacion.required'     => 'La carta de aceptación es obligatoria',
+                'carta_presentacion.required'   => 'La carta de presentación es obligatoria',
+                'documento_ia02.required'       => 'El formulario IA-02 es obligatorio',
+                'constancia_trabajo.required'   => 'La constancia de trabajo es obligatoria',
+                'constancia_aprobacion.required'=> 'La constancia de aprobación es obligatoria',
             ]);
 
             // ✅ Validar manualmente que haya al menos un día activo
             $hayDiaActivo = false;
             foreach ($validated['dias_laborables'] as $dia => $config) {
-                if ($config['activo'] === true) {
+                if (filter_var($config['activo'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
                     $hayDiaActivo = true;
                     break;
                 }
@@ -148,6 +157,26 @@ class SolicitudPPSController extends Controller
                 return back()
                     ->withInput()
                     ->with('error', 'Debes seleccionar al menos un día laborable');
+            }
+
+            // ✅ Validar que hora_salida > hora_entrada en cada día activo
+            foreach ($validated['dias_laborables'] as $dia => $config) {
+                if (!filter_var($config['activo'] ?? false, FILTER_VALIDATE_BOOLEAN)) continue;
+
+                $entrada = $config['hora_entrada'] ?? null;
+                $salida  = $config['hora_salida']  ?? null;
+
+                if (!$entrada || !$salida) {
+                    return back()
+                        ->withInput()
+                        ->with('error', "El día {$dia} activo debe tener hora de entrada y salida.");
+                }
+
+                if (strtotime($salida) <= strtotime($entrada)) {
+                    return back()
+                        ->withInput()
+                        ->with('error', "En el día {$dia} la hora de salida debe ser mayor que la hora de entrada.");
+                }
             }
 
             Log::info('✅ Días laborables validados correctamente', [
@@ -232,6 +261,30 @@ class SolicitudPPSController extends Controller
             // Crear horario legible (para compatibilidad con vistas antiguas)
             $horarioTexto = $this->generarHorarioTexto($validated['dias_laborables']);
 
+            // Sincronizar empresa_id <-> nombre_empresa
+            $empresaId     = $request->input('empresa_id') ?: null;
+            $nombreEmpresa = trim($request->input('nombre_empresa', ''));
+
+            if ($empresaId) {
+                // El estudiante seleccionó del dropdown: usar el nombre oficial de la BD
+                $empresa = Empresa::find($empresaId);
+                if ($empresa) {
+                    $nombreEmpresa = $empresa->nombre;
+                } else {
+                    // El ID no existe (raro), lo descartamos
+                    $empresaId = null;
+                }
+            } else {
+                // El estudiante escribió manualmente: buscar o crear en la tabla empresas
+                $nombreNorm = $this->normalizarNombreEmpresa($nombreEmpresa);
+                $empresa = Empresa::firstOrCreate(
+                    ['nombre' => $nombreNorm],
+                    ['activa' => true]
+                );
+                $empresaId     = $empresa->id;
+                $nombreEmpresa = $empresa->nombre;
+            }
+
             // Crear solicitud
             $solicitud = SolicitudPPS::create([
                 'user_id'          => Auth::id(),
@@ -241,7 +294,7 @@ class SolicitudPPSController extends Controller
                 'telefono_alumno'  => $request->input('telefono_alumno'),
                 'dni_estudiante'   => $request->input('dni_estudiante'), // ✅ NUEVO
                 'foto_estudiante'  => $fotoPath,
-                'nombre_empresa'   => $request->input('nombre_empresa'),
+                'nombre_empresa'   => $nombreEmpresa,
                 'tipo_empresa'     => $request->input('tipo_empresa'),
                 'direccion_empresa'=> $request->input('direccion_empresa'),
                 'nombre_jefe'      => $request->input('nombre_jefe'),
@@ -251,7 +304,7 @@ class SolicitudPPSController extends Controller
                 'correo_jefe'      => $request->input('correo_jefe'),
                 'puesto_trabajo'   => $request->input('puesto_trabajo'),
                 'anios_trabajando' => $request->input('anios_trabajando'),
-                'empresa_id' => $request->input('empresa_id'),
+                'empresa_id' => $empresaId,
                 'fecha_inicio'     => $fechaInicio,
                 'fecha_fin'        => $resultado['fecha_fin'],
                 'horario'          => $horarioTexto,
@@ -512,6 +565,34 @@ Log::info('==================== FIN DEBUG DOCUMENTOS ====================');
     /**
      * Genera un texto legible del horario (para compatibilidad)
      */
+    private function normalizarNombreEmpresa(string $nombre): string
+    {
+        $nombre = preg_replace('/\s+/u', ' ', trim($nombre));
+        $nombre = mb_strtolower($nombre, 'UTF-8');
+        $nombre = mb_convert_case($nombre, MB_CASE_TITLE, 'UTF-8');
+
+        $map = [
+            'Unah'    => 'UNAH',
+            'Hondutel'=> 'HONDUTEL',
+            'S.a.'    => 'S.A.',
+            'S. A.'   => 'S.A.',
+            'Sa'      => 'S.A.',
+            'S De Rl' => 'S. DE R.L.',
+            'De'      => 'de',
+            'Los'     => 'los',
+            'Del'     => 'del',
+            'La'      => 'la',
+            'El'      => 'el',
+            'Y'       => 'y',
+        ];
+
+        foreach ($map as $from => $to) {
+            $nombre = preg_replace('/\b' . preg_quote($from, '/') . '\b/u', $to, $nombre);
+        }
+
+        return $nombre;
+    }
+
     private function generarHorarioTexto(array $diasLaborables): string
     {
         $dias = [];

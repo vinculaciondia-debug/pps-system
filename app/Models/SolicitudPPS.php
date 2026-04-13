@@ -174,6 +174,14 @@ class SolicitudPPS extends Model
         return $this->attributes['observacion'] ?? null;
     }
 
+    public function getObservacionAttribute($value)
+    {
+        if (!is_null($value)) {
+            return $value;
+        }
+        return $this->attributes['observaciones'] ?? null;
+    }
+
     /**
      * ✅ NUEVO: Calcular fecha de finalización basada en 800 horas
      */

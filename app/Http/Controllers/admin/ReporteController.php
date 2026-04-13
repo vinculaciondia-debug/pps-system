@@ -37,11 +37,13 @@ class ReporteController extends Controller
                 'solicitud_p_p_s.created_at',
                 'solicitud_p_p_s.tipo_practica',
                 'solicitud_p_p_s.supervisor_id',
+                'solicitud_p_p_s.nombre_empresa',
                 'sup.name as supervisor_name',
             ]);
 
         if ($request->filled('estado'))     $query->where('solicitud_p_p_s.estado_solicitud', $request->estado);
-        if ($request->filled('supervisor')) $query->where('solicitud_p_p_s.supervisor_id', $request->supervisor); // id de tabla supervisores
+        if ($request->filled('supervisor')) $query->where('solicitud_p_p_s.supervisor_id', $request->supervisor);
+        if ($request->filled('empresa'))    $query->where('solicitud_p_p_s.nombre_empresa', 'like', '%' . $request->empresa . '%');
         if ($request->filled('desde'))      $query->whereDate('solicitud_p_p_s.created_at','>=',$request->desde);
         if ($request->filled('hasta'))      $query->whereDate('solicitud_p_p_s.created_at','<=',$request->hasta);
 
@@ -70,11 +72,13 @@ class ReporteController extends Controller
                 'solicitud_p_p_s.created_at',
                 'solicitud_p_p_s.tipo_practica',
                 'solicitud_p_p_s.supervisor_id',
+                'solicitud_p_p_s.nombre_empresa',
                 'sup.name as supervisor_name',
             ]);
 
         if ($request->filled('estado'))     $query->where('solicitud_p_p_s.estado_solicitud', $request->estado);
         if ($request->filled('supervisor')) $query->where('solicitud_p_p_s.supervisor_id', $request->supervisor);
+        if ($request->filled('empresa'))    $query->where('solicitud_p_p_s.nombre_empresa', 'like', '%' . $request->empresa . '%');
         if ($request->filled('desde'))      $query->whereDate('solicitud_p_p_s.created_at','>=',$request->desde);
         if ($request->filled('hasta'))      $query->whereDate('solicitud_p_p_s.created_at','<=',$request->hasta);
 
@@ -100,11 +104,11 @@ class ReporteController extends Controller
         $sheet->setTitle('Solicitudes');
 
         // Encabezados
-        $headers = ['ID','Cuenta','Estado','Tipo','Supervisor','Fecha'];
+        $headers = ['ID','Cuenta','Estado','Tipo','Empresa','Supervisor','Fecha'];
         $sheet->fromArray($headers, null, 'A1');
 
         // Estilo encabezados
-        $sheet->getStyle('A1:F1')->applyFromArray([
+        $sheet->getStyle('A1:G1')->applyFromArray([
             'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
             'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'color' => ['rgb' => '1F4E78']],
             'alignment' => ['horizontal' => 'center', 'vertical' => 'center'],
@@ -119,11 +123,12 @@ class ReporteController extends Controller
             $sheet->setCellValueExplicit("B{$row}", $s->numero_cuenta, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
             $sheet->setCellValue("C{$row}", $s->estado_solicitud);
             $sheet->setCellValue("D{$row}", $s->tipo_practica);
-            $sheet->setCellValue("E{$row}", $s->supervisor_name ?? 'Sin asignar');
-            $sheet->setCellValue("F{$row}", optional($s->created_at)->format('d/m/Y'));
+            $sheet->setCellValue("E{$row}", $s->nombre_empresa ?? '—');
+            $sheet->setCellValue("F{$row}", $s->supervisor_name ?? 'Sin asignar');
+            $sheet->setCellValue("G{$row}", optional($s->created_at)->format('d/m/Y'));
 
             // Bordes fila
-            $sheet->getStyle("A{$row}:F{$row}")->getBorders()->getAllBorders()
+            $sheet->getStyle("A{$row}:G{$row}")->getBorders()->getAllBorders()
                 ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
 
             // Color Estado
@@ -143,22 +148,22 @@ class ReporteController extends Controller
         }
 
         // Ajustes columnas
-        foreach (['A'=>6,'B'=>18,'C'=>12,'D'=>12,'E'=>26,'F'=>12] as $col => $width) {
+        foreach (['A'=>6,'B'=>18,'C'=>12,'D'=>12,'E'=>28,'F'=>26,'G'=>12] as $col => $width) {
             $sheet->getColumnDimension($col)->setWidth($width);
         }
 
-        // Wrap texto supervisor
-        $sheet->getStyle("E2:E{$row}")->getAlignment()->setWrapText(true);
+        // Wrap texto
+        $sheet->getStyle("E2:F{$row}")->getAlignment()->setWrapText(true);
 
         // Alineación general
         $sheet->getStyle("A2:A{$row}")->getAlignment()->setHorizontal('center');
-        $sheet->getStyle("F2:F{$row}")->getAlignment()->setHorizontal('center');
+        $sheet->getStyle("G2:G{$row}")->getAlignment()->setHorizontal('center');
 
         // Freeze encabezado
         $sheet->freezePane('A2');
 
         // Autofiltro
-        $sheet->setAutoFilter("A1:F" . ($row-1));
+        $sheet->setAutoFilter("A1:G" . ($row-1));
 
         // Ajustar impresión
         $sheet->getPageSetup()
